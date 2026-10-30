@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import A1TutorialScreen from "./components/A1TutorialScreen";
 import Calculator from "./components/Calculator";
 import CompletionScreen from "./components/CompletionScreen";
@@ -8,9 +8,10 @@ import LevelUpNotice from "./components/LevelUpNotice";
 import MapScreen from "./components/MapScreen";
 import PlayerProfileForm from "./components/PlayerProfileForm";
 import QuestionScreen from "./components/QuestionScreen";
-import { A0_TUTORIAL, getStageA, nextStageA } from "./game/definitions/stages";
+import StageBIntroScreen from "./components/StageBIntroScreen";
+import { A0_TUTORIAL, getStageA, nextStageA, STAGE_A } from "./game/definitions/stages";
 import { GameAudio } from "./game/audio";
-import { getPromotionForCompletion, type CareerLevel } from "./game/logic/career";
+import { getCareerLevel, getPromotionForCompletion, type CareerLevel } from "./game/logic/career";
 import { completeStage } from "./game/logic/progression";
 import type { PlayerAvatarId } from "./game/logic/playerProfile";
 import { createRandom } from "./game/logic/random";
@@ -31,6 +32,8 @@ import {
   type LivePhase,
 } from "./progress/persistence/gameSave";
 import "./styles/global.css";
+
+const LeaderboardScreen = lazy(() => import("./components/LeaderboardScreen"));
 
 type InitialLoad =
   | { save: GameSave; error: null; hasSavedGame: boolean }
@@ -79,6 +82,9 @@ function App() {
   const [continueAfterProfile, setContinueAfterProfile] = useState(false);
   const [promotionLevel, setPromotionLevel] = useState<CareerLevel | null>(null);
   const [confirmNewGame, setConfirmNewGame] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showStageBIntro, setShowStageBIntro] = useState(false);
+  const [leaderboardSubmissionError, setLeaderboardSubmissionError] = useState<string | null>(null);
   const [clockNow, setClockNow] = useState(() => Date.now());
   const questionStartedAt = useRef(0);
   const audioRef = useRef<GameAudio | null>(null);
@@ -157,6 +163,7 @@ function App() {
   const beginNewGame = useCallback((name: string, avatarId: PlayerAvatarId) => {
     audioRef.current?.startMusic();
     questionStartedAt.current = 0;
+    setLeaderboardSubmissionError(null);
     setPauseOpen(false);
     setCalculatorVisible(false);
     setConfirmNewGame(false);
@@ -470,6 +477,26 @@ function App() {
         result: completion,
       };
     });
+    if (questionNumber === 8) {
+      const submission = {
+        playerName: current.playerName,
+        avatarId: current.playerAvatarId,
+        stageId: current.currentStageId,
+        level: getCareerLevel([...current.completedStages, current.currentStageId]).level,
+        score: current.stagePerformancePoints + earnedPoints,
+      };
+      void import("./leaderboard/service").then(({ submitCompletedStage }) =>
+        submitCompletedStage(submission),
+      ).then(() => {
+        setLeaderboardSubmissionError(null);
+      }).catch((error: unknown) => {
+        setLeaderboardSubmissionError(
+          error instanceof Error
+            ? `Score could not be submitted: ${error.message}`
+            : "Score could not be submitted. Please try again later.",
+        );
+      });
+    }
     if (newlyAchievedLevel) setPromotionLevel(newlyAchievedLevel);
   }, [elapsedNow, updateGame]);
 
@@ -554,6 +581,10 @@ function App() {
   const resumeFromMap = useCallback(() => {
     const current = gameRef.current;
     if (!current) return;
+    if (STAGE_A.every(({ id }) => current.completedStages.includes(id))) {
+      setShowStageBIntro(true);
+      return;
+    }
     if (current.completedStages.includes(current.currentStageId)) {
       advanceStage();
       return;
@@ -682,7 +713,7 @@ function App() {
 
   return (
     <div className="app-shell">
-      {game.phase === "menu" && (
+      {game.phase === "menu" && !showLeaderboard && (
         <LandingScreen
           hasSavedGame={hasSavedGame}
           confirmNewGame={confirmNewGame}
@@ -708,15 +739,32 @@ function App() {
           }}
           onOpenMap={openMap}
           onOpenLifestyle={openLifestyle}
+          onOpenLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
+      {game.phase === "menu" && showLeaderboard && (
+        <Suspense fallback={
+          <main className="leaderboard-screen">
+            <p className="leaderboard-state" role="status">Opening Hall of Fame…</p>
+          </main>
+        }>
+          <LeaderboardScreen onBack={() => setShowLeaderboard(false)} />
+        </Suspense>
+      )}
       {game.phase === "map" && (
-        <MapScreen
-          save={game}
-          onContinue={resumeFromMap}
-          onLifestyle={openLifestyle}
-          onMenu={openMenu}
-        />
+        showStageBIntro ? (
+          <StageBIntroScreen
+            onBack={() => setShowStageBIntro(false)}
+            onCalculator={toggleCalculator}
+          />
+        ) : (
+          <MapScreen
+            save={game}
+            onContinue={resumeFromMap}
+            onLifestyle={openLifestyle}
+            onMenu={openMenu}
+          />
+        )
       )}
       {game.phase === "lifestyle" && (
         <LifestyleScreen
@@ -813,6 +861,12 @@ function App() {
         <div className="app-notice audio-notice" role="status">
           {audioError}
           <button onClick={() => setAudioError(null)} type="button">Dismiss</button>
+        </div>
+      )}
+      {leaderboardSubmissionError && (
+        <div className="app-notice leaderboard-submission-notice" role="status">
+          {leaderboardSubmissionError}
+          <button onClick={() => setLeaderboardSubmissionError(null)} type="button">Dismiss</button>
         </div>
       )}
       {profileOpen && (

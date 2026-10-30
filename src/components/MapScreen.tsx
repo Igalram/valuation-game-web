@@ -11,9 +11,12 @@ type MapScreenProps = {
 function MapScreen({ save, onContinue, onLifestyle, onMenu }: MapScreenProps) {
   const currentComplete = save.completedStages.includes(save.currentStageId);
   const nextId = currentComplete ? nextStageA(save.currentStageId) : null;
-  const continueLabel = currentComplete
-    ? nextId ? `CONTINUE TO ${nextId} →` : "STAGE A COMPLETE"
-    : `RESUME ${save.currentStageId} →`;
+  const stageBUnlocked = STAGE_A.every(({ id }) => save.completedStages.includes(id));
+  const continueLabel = stageBUnlocked
+    ? "CONTINUE TO B0 →"
+    : currentComplete
+      ? nextId ? `CONTINUE TO ${nextId} →` : "STAGE A COMPLETE"
+      : `RESUME ${save.currentStageId} →`;
 
   return (
     <main className="map-screen">
@@ -35,8 +38,15 @@ function MapScreen({ save, onContinue, onLifestyle, onMenu }: MapScreenProps) {
             );
           })}
         </div>
+        <section className={`stage-map-node${stageBUnlocked ? " available" : " locked"}`} aria-label="Stage B introduction">
+          <span className="stage-map-id">B0</span>
+          <div>
+            <strong>Yield &amp; Valuation Intro</strong>
+            <span>{stageBUnlocked ? "UNLOCKED" : "LOCKED · COMPLETE STAGE A"}</span>
+          </div>
+        </section>
         <div className="map-actions">
-          <button className="primary-button" disabled={!nextId && currentComplete} onClick={onContinue} type="button">
+          <button className="primary-button" disabled={!nextId && !stageBUnlocked && currentComplete} onClick={onContinue} type="button">
             {continueLabel}
           </button>
           <button className="secondary-button" onClick={onLifestyle} type="button">VISIT LIFESTYLE</button>

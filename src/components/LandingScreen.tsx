@@ -7,6 +7,7 @@ type LandingScreenProps = {
   onCancelNewGame: () => void;
   onOpenMap: () => void;
   onOpenLifestyle: () => void;
+  onOpenLeaderboard: () => void;
 };
 
 function LandingScreen({
@@ -18,6 +19,7 @@ function LandingScreen({
   onCancelNewGame,
   onOpenMap,
   onOpenLifestyle,
+  onOpenLeaderboard,
 }: LandingScreenProps) {
   return (
     <main className="landing-screen">
@@ -60,6 +62,9 @@ function LandingScreen({
               <button className="secondary-button" onClick={onOpenMap} type="button">STAGE MAP</button>
               <button className="secondary-button" onClick={onOpenLifestyle} type="button">LIFESTYLE</button>
             </div>
+            <button className="secondary-button hall-of-fame-button" onClick={onOpenLeaderboard} type="button">
+              HALL OF FAME
+            </button>
           </div>
         )}
         <p className="save-caption">Progress saves in this browser.</p>

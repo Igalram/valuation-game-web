@@ -63,6 +63,98 @@ export const A0_TUTORIAL: IntroChunk[] = [
   },
 ];
 
+export const B0_TUTORIAL: IntroChunk[] = [
+  { title: "AN ASSET", paragraphs: ["You own an asset.", "Let's say it's a house."] },
+  {
+    title: "INCOME",
+    paragraphs: [
+      "You rent it out for $5,000 a month.",
+      "That's $60,000 a year.",
+      "So... what is the house worth?",
+    ],
+    emphasis: ["$5,000 / month", "$60,000 / year"],
+  },
+  {
+    title: "THE MARKET",
+    paragraphs: [
+      "Well, there isn't one magical answer.",
+      "It depends on the market.",
+      "Supply and demand. Interest rates. Taxes. The neighborhood. Schools. Expected growth. Risk. And what other investors are willing to pay.",
+      "Put all of that together, and let's say houses like yours are currently trading at a 5% yield.",
+    ],
+  },
+  {
+    title: "WHAT DOES 5% MEAN?",
+    paragraphs: [
+      "What does a 5% yield actually mean?",
+      "It means buyers expect the $60,000 they earn each year to represent about 5% of what they paid for the house.",
+      "So we can work backwards:",
+      "That's our estimate of the house's fair value.",
+    ],
+    equation: "$60,000 ÷ 5% = $1,200,000",
+  },
+  {
+    title: "USING THE CALCULATOR",
+    paragraphs: [
+      "Annual income = $50,000",
+      "Yield = 4%",
+      "When you use the calculator, remember that 4% is the same as 0.04.",
+    ],
+    emphasis: ["$50,000", "4% = 0.04"],
+    calculatorDemo: true,
+  },
+  {
+    title: "YIELD AND MULTIPLES",
+    paragraphs: [
+      "There's another way of saying exactly the same thing.",
+      "A 5% yield means paying 20 times the annual income.",
+      "So:",
+      "Same house. Same value. Just two different ways of looking at it.",
+    ],
+    equation: "$60,000 × 20 = $1,200,000",
+  },
+  {
+    title: "YIELD / MULTIPLE CHEAT SHEET",
+    paragraphs: [
+      "Here's a useful shortcut.",
+      "Every yield has an equivalent income multiple.",
+      "The lower the yield, the more you're paying for each dollar of income.",
+      "You don't need to memorize these. Just remember the relationship:",
+    ],
+    emphasis: ["LOWER YIELD = HIGHER VALUE", "HIGHER YIELD = LOWER VALUE"],
+    table: [
+      ["2.5%", "40×"], ["3%", "33.3×"], ["4%", "25×"], ["5%", "20×"],
+      ["6%", "16.7×"], ["7%", "14.3×"], ["8%", "12.5×"], ["9%", "11.1×"],
+      ["10%", "10×"], ["11%", "9.1×"], ["12%", "8.3×"], ["13%", "7.7×"],
+      ["14%", "7.1×"], ["15%", "6.7×"], ["16%", "6.25×"], ["17%", "5.9×"],
+      ["18%", "5.6×"], ["19%", "5.3×"], ["20%", "5×"],
+    ],
+  },
+  {
+    title: "WHAT MAKES A GOOD DEAL?",
+    paragraphs: [
+      "Now imagine someone offers you $1,400,000 for the house.",
+      "Our estimate of its fair value was $1,200,000. If you're the seller, that's a pretty good deal.",
+      "SELL FOR $1.4m · FAIR VALUE $1.2m → SELL",
+      "But what if someone offers to sell you the same house for $1,000,000?",
+      "Now you're buying it for less than our estimate of what it's worth.",
+      "BUY FOR $1.0m · FAIR VALUE $1.2m → BUY",
+    ],
+    emphasis: ["SELL", "BUY"],
+  },
+  {
+    title: "THE BASIC IDEA",
+    paragraphs: [
+      "That's the basic idea behind valuation.",
+      "1. Figure out what something is worth.",
+      "2. Compare that with the price you're being offered.",
+      "3. Make your call.",
+      "Ready? Let's try it.",
+    ],
+    decisions: ["BUY", "NEUTRAL", "SELL"],
+  },
+];
+
 export const A1_TUTORIAL = {
   title: "Interest",
   opportunity: "$1,000 is invested for one year at 5%.",

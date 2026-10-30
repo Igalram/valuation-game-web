@@ -1,0 +1,4 @@
+project_id = "valuation-game-web"
+
+[functions.submit-score]
+verify_jwt = false

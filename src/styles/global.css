@@ -296,6 +296,199 @@ button:focus-visible {
   gap: 12px;
 }
 
+.stage-b-notice {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #8a7147;
+  border-radius: 8px;
+  color: #f2d6a5;
+  background: #28271f;
+  line-height: 1.5;
+}
+
+.hall-of-fame-button {
+  justify-self: center;
+  width: min(100%, 300px);
+  color: var(--money);
+  border-color: #3b786f;
+  letter-spacing: 0.1em;
+}
+
+.leaderboard-screen {
+  min-height: 100vh;
+  padding: clamp(14px, 4vw, 44px);
+  background:
+    radial-gradient(ellipse at 50% 24%, rgb(44 75 117 / 25%), transparent 58%),
+    var(--navy);
+}
+
+.leaderboard-card {
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #152133;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 32%);
+}
+
+.leaderboard-header {
+  display: flex;
+  margin-bottom: 24px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.leaderboard-header .eyebrow {
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+}
+
+.leaderboard-header h1 {
+  margin: 0;
+  color: var(--accent);
+  font-size: clamp(1.7rem, 6vw, 3rem);
+  letter-spacing: 0.04em;
+}
+
+.leaderboard-controls {
+  display: flex;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaderboard-mode {
+  min-height: 42px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #ebf0f8;
+  background: #101b2b;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.leaderboard-mode.active {
+  color: #102039;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.leaderboard-stage-select {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.leaderboard-stage-select select {
+  max-width: min(58vw, 280px);
+  min-height: 42px;
+  padding: 8px 30px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #ebf0f8;
+  background: #101b2b;
+  font: inherit;
+}
+
+.leaderboard-state {
+  display: grid;
+  min-height: 160px;
+  margin: 0;
+  padding: 28px;
+  place-items: center;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.leaderboard-error {
+  color: #ffd1c9;
+  border-color: #94584c;
+}
+
+.leaderboard-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #26384d;
+}
+
+.leaderboard-table th {
+  color: var(--muted);
+  background: #101b2b;
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+}
+
+.leaderboard-table td:first-child {
+  color: var(--time);
+  font-weight: 800;
+}
+
+.leaderboard-table td:nth-child(3),
+.leaderboard-table td:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+}
+
+.leaderboard-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.leaderboard-table tr.current-player {
+  background: rgb(65 183 196 / 13%);
+}
+
+.leaderboard-player {
+  display: flex;
+  min-width: 150px;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.leaderboard-avatar {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.you-label {
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #102039;
+  background: var(--money);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.leaderboard-footnote {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .map-screen,
 .lifestyle-screen {
   min-height: 100vh;
@@ -324,6 +517,29 @@ button:focus-visible {
 .map-description {
   color: var(--muted);
   line-height: 1.5;
+}
+
+.leaderboard-controls {
+  align-items: stretch;
+}
+
+.leaderboard-mode {
+  flex: 1 1 140px;
+}
+
+.leaderboard-stage-select {
+  width: 100%;
+  margin-left: 0;
+  justify-content: space-between;
+}
+
+.leaderboard-stage-select select {
+  flex: 1;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 10px 8px;
 }
 
 .stage-map-list {

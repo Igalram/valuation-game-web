@@ -1,12 +1,28 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { STAGE_A } from "./game/definitions/stages";
 import { createRandom } from "./game/logic/random";
 import { generateStageQuestion } from "./game/logic/questions";
 import { createNewGame, loadGame, saveGame, SAVE_KEY, type GameSave } from "./progress/persistence/gameSave";
 
+const leaderboardMocks = vi.hoisted(() => ({
+  submit: vi.fn(),
+}));
+
+vi.mock("./leaderboard/service", () => ({
+  submitCompletedStage: leaderboardMocks.submit,
+  fetchOverallLeaderboard: vi.fn(),
+  fetchStageLeaderboard: vi.fn(),
+  getOrCreatePlayerId: vi.fn(),
+  isLeaderboardConfigured: vi.fn(() => false),
+}));
+
 vi.mock("./systems/lifestyle-shop/LifestyleDriveway", () => ({ default: () => null }));
+
+beforeEach(() => {
+  leaderboardMocks.submit.mockReset().mockResolvedValue(undefined);
+});
 
 function createPlayerProfile(name = "Alex") {
   fireEvent.click(screen.getByRole("button", { name: "NEW GAME" }));
@@ -22,7 +38,18 @@ function finishA4CalculatorDemo() {
 }
 
 describe("Stage A browser lifecycle", () => {
-  it("completes all eight A1 questions and persists the one-time cash reward", () => {
+  it("opens the Hall of Fame from the main menu and handles unavailable service", async () => {
+    window.localStorage.clear();
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "HALL OF FAME" }));
+    expect(await screen.findByRole("heading", { name: "HALL OF FAME" })).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Online leaderboard unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "BACK" }));
+    expect(screen.getByRole("heading", { name: "VALUATION LAB" })).toBeInTheDocument();
+  });
+
+  it("completes all eight A1 questions and persists the one-time cash reward", async () => {
     window.localStorage.clear();
     const { unmount } = render(<App />);
 
@@ -58,6 +85,16 @@ describe("Stage A browser lifecycle", () => {
     expect(saved.result.totalQuestions).toBe(8);
     expect(saved.cashCreditedStages).toContain("A1");
     expect(saved.availableCash).toBe(saved.result.cashCredited);
+    await waitFor(() => {
+      expect(leaderboardMocks.submit).toHaveBeenCalledOnce();
+      expect(leaderboardMocks.submit).toHaveBeenCalledWith(expect.objectContaining({
+        playerName: "Alex",
+        avatarId: "alex",
+        stageId: "A1",
+        score: saved.result.performancePoints,
+        level: 2,
+      }));
+    });
 
     fireEvent.click(screen.getByRole("button", { name: "CONTINUE TO MAP →" }));
     unmount();
@@ -67,6 +104,7 @@ describe("Stage A browser lifecycle", () => {
     expect(screen.queryByText("LEVEL UP!")).not.toBeInTheDocument();
     const reloadedSave = JSON.parse(window.localStorage.getItem(SAVE_KEY)!);
     expect(reloadedSave.availableCash).toBe(saved.availableCash);
+    expect(leaderboardMocks.submit).toHaveBeenCalledOnce();
   });
 
   it("unlocks and completes every Stage A substage through the shared browser flow", () => {
@@ -125,6 +163,58 @@ describe("Stage A browser lifecycle", () => {
     }
 
     expect(screen.getByRole("heading", { name: "A8 · PERPETUITIES" })).toBeInTheDocument();
+  });
+
+  it("unlocks and opens the migrated B0 introduction after all Stage A substages", () => {
+    const completedStages = STAGE_A.map(({ id }) => id);
+    const save: GameSave = {
+      ...createNewGame(),
+      playerName: "Alex",
+      profileCreated: true,
+      phase: "map",
+      resumePhase: "map",
+      currentStageId: "A8",
+      completedStages,
+      cashCreditedStages: completedStages,
+      careerEarnings: 12_345,
+      availableCash: 6_789,
+      ownedLifestyleIds: ["outfit_01"],
+      lifestyleSlots: { clothing: "outfit_01" },
+    };
+    saveGame(save);
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "CONTINUE" }));
+    expect(screen.getByText("UNLOCKED")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "CONTINUE TO B0 →" }));
+
+    expect(screen.getByRole("heading", { name: "AN ASSET" })).toBeInTheDocument();
+    for (const chapter of [
+      "INCOME",
+      "THE MARKET",
+      "WHAT DOES 5% MEAN?",
+      "USING THE CALCULATOR",
+      "YIELD AND MULTIPLES",
+      "YIELD / MULTIPLE CHEAT SHEET",
+      "WHAT MAKES A GOOD DEAL?",
+      "THE BASIC IDEA",
+    ]) {
+      fireEvent.click(screen.getByRole("button", { name: "CONTINUE →" }));
+      expect(screen.getByRole("heading", { name: chapter })).toBeInTheDocument();
+    }
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The B1–B5 playable substages have not yet been migrated",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "BACK TO STAGE MAP" }));
+    expect(screen.getByRole("heading", { name: "STAGE MAP" })).toBeInTheDocument();
+
+    const unchangedSave = loadGame()!;
+    expect(unchangedSave.completedStages).toEqual(completedStages);
+    expect(unchangedSave.careerEarnings).toBe(save.careerEarnings);
+    expect(unchangedSave.availableCash).toBe(save.availableCash);
+    expect(unchangedSave.ownedLifestyleIds).toEqual(save.ownedLifestyleIds);
+    expect(unchangedSave.lifestyleSlots).toEqual(save.lifestyleSlots);
   });
 
   it("completes a stage, shops with cash, equips an owned item, and returns to the map without replaying rewards", () => {
