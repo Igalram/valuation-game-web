@@ -1,4 +1,4 @@
-import { A1_STAGE, type StageAId } from "../definitions/stages";
+import { A1_STAGE, type StageAId, type StageId } from "../definitions/stages";
 import { choose, shuffle, type RandomSource } from "./random";
 import {
   annuityPresentValue,
@@ -10,12 +10,13 @@ import {
 
 export type TimeValueQuestion = {
   id: string;
-  stageId: StageAId;
+  stageId: StageId;
   kind: string;
   prompt: string;
   choices: [string, string, string];
   correctAnswer: string;
   explanation: string;
+  reference?: string;
   diagram: [string, string][];
   completedDiagram: [string, string][];
   inputs: Record<string, number>;
@@ -449,7 +450,7 @@ function generateA8Question(
 }
 
 export function generateStageQuestion(
-  stageId: StageAId,
+  stageId: StageId,
   random: RandomSource,
   serial: number,
   questionNumber: number,
@@ -461,7 +462,143 @@ export function generateStageQuestion(
   if (stageId === "A5") return generateA5Question(random, serial);
   if (stageId === "A6") return generateA6Question(random, serial);
   if (stageId === "A7") return generateA7Question(random, serial);
-  return generateA8Question(random, serial);
+  if (stageId === "A8") return generateA8Question(random, serial);
+  return generateYieldQuestion(stageId, random, serial);
+}
+
+const BENCHMARK_TYPES = [
+  ["Build-to-Rent", 5.5], ["Cold Storage Property", 5.5], ["Holiday Park", 8],
+  ["Hotel", 8], ["Industrial Property", 5.5], ["Logistics Property", 5.5],
+  ["Medical Office", 5.5], ["Multifamily Property", 5.5], ["Office", 6],
+  ["Rental Portfolio", 6], ["Retail Park", 6], ["Self Storage", 6],
+  ["Senior Living", 6], ["Shopping Centre", 6], ["Student Housing", 5.5],
+  ["Supermarket", 5.5], ["Warehouse Property", 5.5], ["Battery Storage", 8],
+  ["Biogas", 8], ["Combined Heat & Power", 8], ["Community Solar", 6],
+  ["District Heating", 8], ["Hydro", 6], ["Peaker", 8],
+  ["Rooftop Solar", 6], ["Utility Solar", 6], ["Wind", 6],
+  ["Airport Parking", 6], ["Desalination", 6], ["Ferry", 6],
+  ["Pipeline", 6], ["Port Terminal", 6], ["Rail", 6],
+  ["Toll Road", 5], ["Toll Tunnel", 5], ["Tram", 6],
+  ["Transport", 6], ["Waste", 6], ["Water", 5],
+  ["Colocation", 6], ["Data Center", 6], ["Fiber", 6],
+  ["Hyperscale Data Center", 5.5], ["Telecom Towers", 6],
+  ["Auto Parts", 8], ["Catering", 8], ["Childcare", 8],
+  ["Dental", 8], ["Education", 8], ["Equipment Rental Business", 8],
+  ["Fitness", 8], ["Food Manufacturing", 8], ["Furniture", 8],
+  ["Grocery", 8], ["Healthcare", 8], ["Horticulture", 8],
+  ["HVAC Services", 8], ["Industrial Manufacturing", 8],
+  ["Logistics Company", 8], ["Marine Services", 8], ["Optical", 8],
+  ["Packaging Company", 8], ["Recycling Services", 8],
+  ["Security Services", 8], ["Software Company", 8],
+  ["Specialty Chemicals", 8], ["Testing Laboratories", 8],
+  ["Travel Services", 8], ["Veterinary", 8],
+  ["Cold-Chain Logistics", 8], ["Equipment Leasing", 8],
+  ["Farmland", 5], ["Marina", 6], ["Outdoor Advertising", 6],
+  ["Parking", 6], ["Quarry", 8], ["Timber", 5],
+  ["Vehicle Leasing", 8], ["Vineyard", 6],
+] as const;
+
+const RATING_CHOICES = ["BUY", "NEUTRAL", "SELL"] as const;
+
+function classifyMispricing(mispricingPct: number): string {
+  if (mispricingPct > 5) return "BUY";
+  if (mispricingPct < -5) return "SELL";
+  return "NEUTRAL";
+}
+
+function generateYieldQuestion(
+  stageId: Extract<StageId, "B1" | "B2" | "B3" | "B4" | "B5">,
+  random: RandomSource,
+  serial: number,
+): TimeValueQuestion {
+  if (stageId === "B4") {
+    const yieldPct = choose([4, 5, 6, 7, 8], random);
+    const price = choose([1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000], random);
+    const income = price * yieldPct / 100;
+    const choices = shuffle([yieldPct - 1, yieldPct, yieldPct + 1], random);
+    const question: TimeValueQuestion = {
+      id: `${stageId}-${serial}`,
+      stageId,
+      kind: "implied_yield",
+      prompt: `An asset earns ${formatMoney(income)} annually and is offered for ${formatMoney(price)}. What is its implied yield?`,
+      choices: [choices[0]!.toFixed(1) + "%", choices[1]!.toFixed(1) + "%", choices[2]!.toFixed(1) + "%"],
+      correctAnswer: `${yieldPct.toFixed(1)}%`,
+      explanation: `Implied yield = annual income ÷ price = ${formatMoney(income)} ÷ ${formatMoney(price)} = ${yieldPct.toFixed(1)}%.`,
+      diagram: [["ANNUAL INCOME", formatMoney(income)], ["OFFER PRICE", formatMoney(price)], ["IMPLIED YIELD", "?"]],
+      completedDiagram: [["ANNUAL INCOME", formatMoney(income)], ["OFFER PRICE", formatMoney(price)], ["IMPLIED YIELD", `${yieldPct.toFixed(1)}%`]],
+      inputs: { annual_income: income, price, fair_value: price, implied_yield_pct: yieldPct },
+    };
+    if (!isValidStageQuestion(question)) throw new Error("B4 question generator produced an invalid question");
+    return question;
+  }
+
+  let income: number;
+  let yieldPct: number;
+  let fairValue: number;
+  let detail: string;
+  let kind: string;
+  let reference: string | undefined;
+  let inputs: Record<string, number>;
+  if (stageId === "B1") {
+    income = choose([50_000, 75_000, 100_000, 125_000, 150_000, 200_000], random);
+    yieldPct = choose([4, 5, 6, 8, 10], random);
+    fairValue = income / (yieldPct / 100);
+    detail = `the required yield is ${yieldPct}%`;
+    kind = "simple_yield_valuation";
+    inputs = { annual_income: income, required_yield_pct: yieldPct };
+  } else if (stageId === "B2") {
+    income = choose(Array.from({ length: 23 }, (_, index) => (index + 3) * 10_000), random);
+    const benchmarkIndex = Math.floor(random() * BENCHMARK_TYPES.length);
+    const [benchmarkName, benchmarkYield] = BENCHMARK_TYPES[benchmarkIndex]!;
+    yieldPct = benchmarkYield;
+    fairValue = income / (yieldPct / 100);
+    detail = `the benchmark yield is ${yieldPct}%`;
+    kind = "benchmark_yield_valuation";
+    reference = `MARKET YIELD SHEET · ${benchmarkName}: ${yieldPct}%`;
+    inputs = { annual_income: income, required_yield_pct: yieldPct, benchmark_type_index: benchmarkIndex };
+  } else if (stageId === "B3") {
+    income = choose(Array.from({ length: 11 }, (_, index) => (index + 5) * 10_000), random);
+    const multiple = choose([8, 10, 12.5, 15, 20], random);
+    yieldPct = 100 / multiple;
+    fairValue = income * multiple;
+    detail = `the justified income multiple is ${multiple}x`;
+    kind = "yield_multiple_valuation";
+    inputs = { annual_income: income, multiple, equivalent_yield_pct: yieldPct };
+  } else {
+    income = choose(Array.from({ length: 1099 }, (_, index) => (index + 401) * 100), random);
+    yieldPct = choose(Array.from({ length: 49 }, (_, index) => (index + 41) / 10), random);
+    fairValue = income / (yieldPct / 100);
+    detail = `the required yield is ${yieldPct.toFixed(1)}%`;
+    kind = "harder_yield_valuation";
+    inputs = { annual_income: income, required_yield_pct: yieldPct };
+  }
+
+  const targetRating = RATING_CHOICES[(serial - 1) % RATING_CHOICES.length]!;
+  const targetMispricing = stageId === "B1" && targetRating !== "NEUTRAL"
+    ? targetRating === "BUY" ? 25 : -25
+    : targetRating === "BUY" ? 10 : targetRating === "SELL" ? -10 : 0;
+  const price = fairValue * (1 - targetMispricing / 100);
+  const mispricing = (fairValue - price) / fairValue * 100;
+  const correctAnswer = classifyMispricing(mispricing);
+  const question: TimeValueQuestion = {
+    id: `${stageId}-${serial}`,
+    stageId,
+    kind,
+    prompt: stageId === "B2"
+      ? `A ${reference!.split(" · ")[1]!.split(":")[0]} generates ${formatMoney(income)} annually and is offered for ${formatMoney(price)}. How is it rated?`
+      : `An asset generates ${formatMoney(income)} annually and is offered for ${formatMoney(price)}. If ${detail}, how is it rated?`,
+    choices: shuffle([...RATING_CHOICES], random) as [string, string, string],
+    correctAnswer,
+    explanation: stageId === "B3"
+      ? `Fair value = ${formatMoney(income)} × ${inputs.multiple} = ${formatMoney(fairValue)}. The offer is ${correctAnswer === "BUY" ? "below" : correctAnswer === "SELL" ? "above" : "at"} fair value, so rate it ${correctAnswer}.`
+      : `Fair value = ${formatMoney(income)} ÷ ${yieldPct}% = ${formatMoney(fairValue)}. The offer is ${correctAnswer === "BUY" ? "below" : correctAnswer === "SELL" ? "above" : "at"} fair value, so rate it ${correctAnswer}.`,
+    ...(reference ? { reference } : {}),
+    diagram: [["ANNUAL INCOME", formatMoney(income)], ["OFFER PRICE", formatMoney(price)], ["FAIR VALUE", "?"]],
+    completedDiagram: [["ANNUAL INCOME", formatMoney(income)], ["OFFER PRICE", formatMoney(price)], ["FAIR VALUE", formatMoney(fairValue)]],
+    inputs: { ...inputs, fair_value: fairValue, price },
+  };
+  if (!isValidStageQuestion(question)) throw new Error(`${stageId} question generator produced an invalid question`);
+  return question;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -473,7 +610,7 @@ export function isValidStageQuestion(value: unknown): value is TimeValueQuestion
   if (
     typeof value.id !== "string" ||
     typeof value.stageId !== "string" ||
-    !/^A[1-8]-\d+$/.test(value.id) ||
+    !/^[AB][1-8]-\d+$/.test(value.id) ||
     !value.id.startsWith(`${value.stageId}-`) ||
     typeof value.kind !== "string" ||
     typeof value.prompt !== "string" ||
@@ -497,6 +634,9 @@ export function isValidStageQuestion(value: unknown): value is TimeValueQuestion
         point.every((part) => typeof part === "string"),
     )
   ) return false;
+  if (value.stageId === "B1" || value.stageId === "B2" || value.stageId === "B3" || value.stageId === "B4" || value.stageId === "B5") {
+    return isValidYieldQuestion(value);
+  }
   if (value.stageId === "A2") return isValidA2Question(value);
   if (value.stageId !== "A1") return isValidLaterStageQuestion(value);
   if (
@@ -543,6 +683,102 @@ export function isValidStageQuestion(value: unknown): value is TimeValueQuestion
   );
 }
 
+function isValidYieldQuestion(value: Record<string, unknown>): boolean {
+  const inputs = value.inputs as Record<string, unknown>;
+  const choices = value.choices as string[];
+  const diagram = value.diagram as [string, string][];
+  const completedDiagram = value.completedDiagram as [string, string][];
+  const stageId = value.stageId as StageId;
+  const income = inputs.annual_income;
+  const price = inputs.price;
+  if (
+    typeof income !== "number" || !Number.isFinite(income) ||
+    typeof price !== "number" || !Number.isFinite(price) ||
+    new Set(choices).size !== 3 ||
+    choices.filter((choice) => choice === value.correctAnswer).length !== 1 ||
+    diagram.length !== 3 || completedDiagram.length !== 3 ||
+    diagram[0]?.[0] !== "ANNUAL INCOME" ||
+    diagram[1]?.[0] !== "OFFER PRICE" ||
+    completedDiagram[0]?.[1] !== formatMoney(income) ||
+    completedDiagram[1]?.[1] !== formatMoney(price)
+  ) return false;
+
+  if (stageId === "B4") {
+    const yieldPct = inputs.implied_yield_pct;
+    return typeof yieldPct === "number" &&
+      [4, 5, 6, 7, 8].includes(yieldPct) &&
+      inputs.fair_value === price &&
+      price === [1_000_000, 1_500_000, 2_000_000, 2_500_000, 3_000_000].find((item) => item === price) &&
+      income === price * yieldPct / 100 &&
+      value.kind === "implied_yield" &&
+      value.prompt === `An asset earns ${formatMoney(income)} annually and is offered for ${formatMoney(price)}. What is its implied yield?` &&
+      value.correctAnswer === `${yieldPct.toFixed(1)}%` &&
+      choices.includes(value.correctAnswer as string) &&
+      choices.every((choice) => [yieldPct - 1, yieldPct, yieldPct + 1].map((item) => `${item.toFixed(1)}%`).includes(choice)) &&
+      diagram[2]?.[0] === "IMPLIED YIELD" &&
+      diagram[2]?.[1] === "?" &&
+      completedDiagram[2]?.[0] === "IMPLIED YIELD" &&
+      completedDiagram[2]?.[1] === `${yieldPct.toFixed(1)}%` &&
+      value.explanation === `Implied yield = annual income ÷ price = ${formatMoney(income)} ÷ ${formatMoney(price)} = ${yieldPct.toFixed(1)}%.`;
+  }
+
+  const fairValue = inputs.fair_value;
+  if (typeof fairValue !== "number" || !Number.isFinite(fairValue)) return false;
+  const yieldPct = inputs.required_yield_pct;
+  const multiple = inputs.multiple;
+  const expectedFair = stageId === "B3" && typeof multiple === "number"
+    ? income * multiple
+    : typeof yieldPct === "number" ? income / (yieldPct / 100) : Number.NaN;
+  if (Math.abs(fairValue - expectedFair) > 1e-8) return false;
+  const serial = Number((value.id as string).split("-")[1]);
+  const targetRating = RATING_CHOICES[(serial - 1) % RATING_CHOICES.length];
+  const targetMispricing = stageId === "B1" && targetRating !== "NEUTRAL"
+    ? targetRating === "BUY" ? 25 : -25
+    : targetRating === "BUY" ? 10 : targetRating === "SELL" ? -10 : 0;
+  if (Math.abs(price - expectedFair * (1 - targetMispricing / 100)) > 1e-8) return false;
+  if (stageId === "B1" &&
+      (![50_000, 75_000, 100_000, 125_000, 150_000, 200_000].includes(income) ||
+       ![4, 5, 6, 8, 10].includes(yieldPct as number))) return false;
+  if (stageId === "B2") {
+    const typeIndex = inputs.benchmark_type_index;
+    if (
+      typeof typeIndex !== "number" || !Number.isInteger(typeIndex) ||
+      !BENCHMARK_TYPES[typeIndex] ||
+      income < 30_000 || income > 250_000 || income % 10_000 !== 0 ||
+      yieldPct !== BENCHMARK_TYPES[typeIndex][1] ||
+      value.reference !== `MARKET YIELD SHEET · ${BENCHMARK_TYPES[typeIndex][0]}: ${yieldPct}%`
+    ) return false;
+  }
+  if (stageId === "B3" &&
+      (income < 50_000 || income > 150_000 || income % 10_000 !== 0 ||
+       ![8, 10, 12.5, 15, 20].includes(multiple as number) ||
+       inputs.equivalent_yield_pct !== 100 / (multiple as number))) return false;
+  if (stageId === "B5" &&
+      (income < 40_100 || income > 149_900 || income % 100 !== 0 ||
+       typeof yieldPct !== "number" || yieldPct < 4.1 || yieldPct > 8.9 ||
+       Math.round(yieldPct * 10) !== yieldPct * 10)) return false;
+  const expectedKind = {
+    B1: "simple_yield_valuation",
+    B2: "benchmark_yield_valuation",
+    B3: "yield_multiple_valuation",
+    B5: "harder_yield_valuation",
+  }[stageId as "B1" | "B2" | "B3" | "B5"];
+  if (value.kind !== expectedKind) return false;
+  const rating = classifyMispricing((fairValue - price) / fairValue * 100);
+  return (
+    value.correctAnswer === rating &&
+    choices.every((choice) => RATING_CHOICES.includes(choice as typeof RATING_CHOICES[number])) &&
+    diagram[2]?.[0] === "FAIR VALUE" &&
+    diagram[2]?.[1] === "?" &&
+    completedDiagram[2]?.[0] === "FAIR VALUE" &&
+    completedDiagram[2]?.[1] === formatMoney(fairValue) &&
+    value.explanation === (
+      stageId === "B3"
+        ? `Fair value = ${formatMoney(income)} × ${multiple} = ${formatMoney(fairValue)}. The offer is ${rating === "BUY" ? "below" : rating === "SELL" ? "above" : "at"} fair value, so rate it ${rating}.`
+        : `Fair value = ${formatMoney(income)} ÷ ${yieldPct}% = ${formatMoney(fairValue)}. The offer is ${rating === "BUY" ? "below" : rating === "SELL" ? "above" : "at"} fair value, so rate it ${rating}.`
+    )
+  );
+}
 function isValidLaterStageQuestion(value: Record<string, unknown>): boolean {
   const choices = value.choices as string[];
   const inputs = value.inputs as Record<string, number>;

@@ -12,9 +12,9 @@ Scores use the game's existing performance points at the moment an eight-questio
 
 ## 2. Execute the SQL migration
 
-The migration is [supabase/migrations/001_leaderboard.sql](./supabase/migrations/001_leaderboard.sql).
+Apply the migrations in order: [001_leaderboard.sql](./supabase/migrations/001_leaderboard.sql), then [002_stage_b_leaderboard.sql](./supabase/migrations/002_stage_b_leaderboard.sql). The second migration extends the existing leaderboard to the B1–B5 substages and preserves negative performance-point totals.
 
-**Using the Supabase Dashboard:** open the project's SQL Editor, paste the complete migration, and run it once.
+**Using the Supabase Dashboard:** open the project's SQL Editor and run each migration in order, first `001_leaderboard.sql`, then `002_stage_b_leaderboard.sql`.
 
 **Using the Supabase CLI:** install and authenticate the CLI, then from this repository run:
 
@@ -24,7 +24,7 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 ```
 
-The migration creates the scores table, public read-only RLS access, aggregate ranking RPCs, and a service-role-only score submission RPC with a per-player rate limit. Anonymous and authenticated clients are explicitly not granted insert, update, or delete access to scores.
+The migrations create the scores table, public read-only RLS access, aggregate ranking RPCs, and a service-role-only score submission RPC with a per-player rate limit. Anonymous and authenticated clients are explicitly not granted insert, update, or delete access to scores. Both Stage A and B1–B5 are valid score selections.
 
 ## 3. Deploy the Edge Function
 
@@ -86,7 +86,7 @@ The GitHub Pages workflow passes these two repository secrets directly to the Vi
 1. Confirm the migration succeeded and that `submit-score` is deployed with its required service-role secret.
 2. Run locally with the `.env.local` values and start a **new game**. Existing saves and prior completed substages are deliberately not imported or submitted.
 3. Complete all eight questions of a substage. Its performance points are submitted once at the completion transition; replaying it submits a new attempt, while the ranking still uses only the best result for that player and substage.
-4. Open **HALL OF FAME**. Check **Overall Ranking** and **Stage Ranking**, then select a substage. The rankings are retrieved through database RPCs, not by downloading the scores table into the browser.
+4. Open **HALL OF FAME**. Check **Overall Ranking** and **Stage Ranking**, then select a Stage A or B1–B5 substage. The rankings are retrieved through database RPCs, not by downloading the scores table into the browser.
 5. To test a clean deployment, configure the same two public values in GitHub Actions, deploy the Pages workflow, and open the deployed site. A working local `.env.local` does not configure the hosted build.
 6. Without Supabase configuration, open **HALL OF FAME** to verify the friendly unavailable state. This does not indicate a live or operational leaderboard.
 

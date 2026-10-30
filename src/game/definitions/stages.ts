@@ -177,9 +177,12 @@ export const A1_STAGE = {
 } as const;
 
 export type StageAId = "A1" | "A2" | "A3" | "A4" | "A5" | "A6" | "A7" | "A8";
+export type StageBId = "B1" | "B2" | "B3" | "B4" | "B5";
+export type StageId = StageAId | StageBId;
+export type TutorialId = StageId | "B0";
 
 export type StageDefinition = {
-  id: StageAId;
+  id: StageId;
   title: string;
   primaryConcept: string;
   alsoUpdates: string[];
@@ -354,13 +357,127 @@ export const STAGE_A: StageDefinition[] = [
   },
 ];
 
-export function getStageA(stageId: string): StageDefinition {
-  const stage = STAGE_A.find((item) => item.id === stageId);
-  if (!stage) throw new Error(`Unknown Stage A id: ${stageId}`);
+export const STAGE_B: StageDefinition[] = [
+  {
+    id: "B1",
+    title: "Simple Yield Valuation",
+    primaryConcept: "C1",
+    alsoUpdates: [],
+    baseline: 1,
+    timeFactor: 1,
+    tutorial: {
+      title: "Simple Yield Valuation",
+      opportunity: "An asset earns $500,000 annually, requires a 5% yield, and costs $8m.",
+      steps: [
+        "Fair Value = Annual Income ÷ Required Yield",
+        "$500,000 ÷ 5% = $10,000,000",
+        "$8m is below fair value.",
+      ],
+      finalAnswer: "BUY",
+      formula: "Value = Income ÷ Yield",
+    },
+  },
+  {
+    id: "B2",
+    title: "Benchmark Yields",
+    primaryConcept: "C18",
+    alsoUpdates: ["C1"],
+    baseline: 2,
+    timeFactor: 3,
+    tutorial: {
+      title: "Benchmark Yields",
+      opportunity: "A logistics property earns $500,000 of annual NOI and is offered for $9.2m.",
+      steps: [
+        "Find Logistics Property in the benchmark-yield sheet.",
+        "Benchmark yield = 5.5%.",
+        "Fair value = $500,000 ÷ 5.5% ≈ $9,090,909.",
+        "$9.2m is above fair value.",
+      ],
+      finalAnswer: "SELL",
+      formula: "Value = Annual NOI ÷ Benchmark Yield",
+    },
+  },
+  {
+    id: "B3",
+    title: "Yield / Multiple",
+    primaryConcept: "C2",
+    alsoUpdates: ["C1"],
+    baseline: 3,
+    timeFactor: 1,
+    tutorial: {
+      title: "Yield / Multiple Reciprocity",
+      opportunity: "An asset earns $400,000 annually, supports a 10x multiple, and costs $3.6m.",
+      steps: [
+        "A 10x multiple is equivalent to a 10% yield.",
+        "Fair value = $400,000 × 10 = $4,000,000.",
+        "$3.6m is below fair value.",
+      ],
+      finalAnswer: "BUY",
+      formula: "Yield = 1 ÷ Multiple",
+    },
+  },
+  {
+    id: "B4",
+    title: "Implied Yield",
+    primaryConcept: "C3",
+    alsoUpdates: ["C1"],
+    baseline: 4,
+    timeFactor: 1,
+    tutorial: {
+      title: "Implied Yield",
+      opportunity: "An office property earns $600,000 of annual NOI and is offered for $10m.",
+      steps: [
+        "Implied Yield = Annual NOI ÷ Price",
+        "$600,000 ÷ $10,000,000 = 6.0%",
+      ],
+      finalAnswer: "6.0%",
+      formula: "Implied Yield = Annual Income ÷ Price",
+    },
+  },
+  {
+    id: "B5",
+    title: "Harder Yield Valuation",
+    primaryConcept: "C1",
+    alsoUpdates: [],
+    baseline: 5,
+    timeFactor: 1,
+    tutorial: {
+      title: "Harder Yield Arithmetic",
+      opportunity: "An asset earns $437,500 annually, requires a 6.25% yield, and costs $6.5m.",
+      steps: [
+        "Fair Value = Annual Income ÷ Required Yield",
+        "$437,500 ÷ 6.25% = $7,000,000",
+        "$6.5m is below fair value.",
+      ],
+      finalAnswer: "BUY",
+      formula: "Value = Income ÷ Yield",
+    },
+  },
+];
+
+export const ALL_SCORED_STAGES = [...STAGE_A, ...STAGE_B];
+
+export function getStageDefinition(stageId: string): StageDefinition {
+  const stage = ALL_SCORED_STAGES.find((item) => item.id === stageId);
+  if (!stage) throw new Error(`Unknown stage id: ${stageId}`);
   return stage;
 }
 
 export function nextStageA(stageId: StageAId): StageAId | null {
   const index = STAGE_A.findIndex((stage) => stage.id === stageId);
-  return STAGE_A[index + 1]?.id ?? null;
+  const next = STAGE_A[index + 1];
+  return next ? next.id as StageAId : null;
+}
+
+export function isStageId(value: unknown): value is StageId {
+  return typeof value === "string" && ALL_SCORED_STAGES.some((stage) => stage.id === value);
+}
+
+export function isTutorialId(value: unknown): value is TutorialId {
+  return value === "B0" || isStageId(value);
+}
+
+export function nextStage(stageId: StageId): StageId | null {
+  const index = ALL_SCORED_STAGES.findIndex((stage) => stage.id === stageId);
+  return ALL_SCORED_STAGES[index + 1]?.id ?? null;
 }

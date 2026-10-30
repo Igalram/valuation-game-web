@@ -1,6 +1,6 @@
 import type { StageResult } from "../game/logic/progression";
 import type { StageDefinition } from "../game/definitions/stages";
-import { STAGE_A } from "../game/definitions/stages";
+import { STAGE_A, STAGE_B } from "../game/definitions/stages";
 
 type CompletionScreenProps = {
   result: StageResult;
@@ -21,7 +21,11 @@ function CompletionScreen({
   onLifestyle,
   onMap,
 }: CompletionScreenProps) {
-  const completedCount = STAGE_A.filter(({ id }) => completedStages.includes(id)).length;
+  const stages = stage.id.startsWith("B") ? STAGE_B : STAGE_A;
+  const sectionName = stage.id.startsWith("B")
+    ? "STAGE B — YIELD & VALUATION"
+    : "STAGE A — TIME VALUE OF MONEY";
+  const completedCount = stages.filter(({ id }) => completedStages.includes(id)).length;
   return (
     <main className="summary-screen">
       <section className="summary-card" aria-labelledby="summary-title">
@@ -32,13 +36,13 @@ function CompletionScreen({
           <strong>{result.correctAnswers} / {result.totalQuestions}</strong>
           <span>correct · {result.accuracyPct}% accuracy</span>
         </div>
-        <section className="stage-a-progress" aria-label="Stage A completion progress">
+        <section className="stage-a-progress" aria-label={`${sectionName} completion progress`}>
           <div className="stage-a-progress-heading">
-            <span>STAGE A — TIME VALUE OF MONEY</span>
-            <strong>{completedCount} / {STAGE_A.length} COMPLETE</strong>
+            <span>{sectionName}</span>
+            <strong>{completedCount} / {stages.length} COMPLETE</strong>
           </div>
           <ol className="stage-a-progress-list">
-            {STAGE_A.map((stageDefinition) => {
+            {stages.map((stageDefinition) => {
               const completed = completedStages.includes(stageDefinition.id);
               return (
                 <li
@@ -60,7 +64,7 @@ function CompletionScreen({
           <div><span>AVAILABLE CASH</span><strong>${availableCash.toLocaleString("en-US")}</strong></div>
           <div><span>CAREER EARNINGS</span><strong>${careerEarnings.toLocaleString("en-US")}</strong></div>
         </div>
-        <p className="next-stage-note">Your earnings are saved. Visit Lifestyle or continue to the Stage A map.</p>
+        <p className="next-stage-note">Your earnings are saved. Visit Lifestyle or continue to the stage map.</p>
         <div className="summary-actions">
           <button className="primary-button" onClick={onLifestyle} type="button">VISIT LIFESTYLE →</button>
           <button className="secondary-button" onClick={onMap} type="button">CONTINUE TO MAP →</button>

@@ -296,16 +296,6 @@ button:focus-visible {
   gap: 12px;
 }
 
-.stage-b-notice {
-  margin: 18px 0 0;
-  padding: 12px 14px;
-  border: 1px solid #8a7147;
-  border-radius: 8px;
-  color: #f2d6a5;
-  background: #28271f;
-  line-height: 1.5;
-}
-
 .hall-of-fame-button {
   justify-self: center;
   width: min(100%, 300px);
@@ -1313,6 +1303,19 @@ button:focus-visible {
   color: #e5ebf4;
   font-size: clamp(1.05rem, 2.3vw, 1.38rem);
   line-height: 1.55;
+}
+
+.benchmark-reference {
+  width: fit-content;
+  margin: -14px 0 22px;
+  padding: 8px 11px;
+  border: 1px solid #426077;
+  border-radius: 8px;
+  color: var(--rate);
+  background: #17283a;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.035em;
 }
 
 .question-prompt::selection,

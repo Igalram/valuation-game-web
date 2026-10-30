@@ -9,9 +9,9 @@ CREATE TABLE public.leaderboard_scores (
     'sofia', 'dev', 'imani', 'theo', 'lucia', 'kai', 'zara', 'noah',
     'elena', 'ravi', 'cleo', 'milo', 'aya', 'ezra', 'lila', 'andre'
   )),
-  stage_id text NOT NULL CHECK (stage_id ~ '^A[1-8]$'),
+  stage_id text NOT NULL CHECK (stage_id ~ '^(A[1-8]|B[1-5])$'),
   level integer NOT NULL CHECK (level BETWEEN 1 AND 6),
-  score integer NOT NULL CHECK (score BETWEEN 0 AND 800000),
+  score integer NOT NULL CHECK (score BETWEEN -800000 AND 800000),
   submitted_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -67,9 +67,9 @@ BEGIN
       'sofia', 'dev', 'imani', 'theo', 'lucia', 'kai', 'zara', 'noah',
       'elena', 'ravi', 'cleo', 'milo', 'aya', 'ezra', 'lila', 'andre'
     )
-    OR requested_stage_id !~ '^A[1-8]$'
+    OR requested_stage_id !~ '^(A[1-8]|B[1-5])$'
     OR requested_level NOT BETWEEN 1 AND 6
-    OR requested_score NOT BETWEEN 0 AND 800000
+    OR requested_score NOT BETWEEN -800000 AND 800000
   THEN
     RAISE EXCEPTION 'INVALID_SUBMISSION';
   END IF;

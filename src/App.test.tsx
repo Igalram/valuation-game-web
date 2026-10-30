@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { STAGE_A } from "./game/definitions/stages";
+import { STAGE_A, STAGE_B } from "./game/definitions/stages";
 import { createRandom } from "./game/logic/random";
 import { generateStageQuestion } from "./game/logic/questions";
 import { createNewGame, loadGame, saveGame, SAVE_KEY, type GameSave } from "./progress/persistence/gameSave";
@@ -165,7 +165,7 @@ describe("Stage A browser lifecycle", () => {
     expect(screen.getByRole("heading", { name: "A8 · PERPETUITIES" })).toBeInTheDocument();
   });
 
-  it("unlocks and opens the migrated B0 introduction after all Stage A substages", () => {
+  it("transitions from B0 into the playable B1 tutorial without changing existing progression data", () => {
     const completedStages = STAGE_A.map(({ id }) => id);
     const save: GameSave = {
       ...createNewGame(),
@@ -185,7 +185,7 @@ describe("Stage A browser lifecycle", () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "CONTINUE" }));
-    expect(screen.getByText("UNLOCKED")).toBeInTheDocument();
+    expect(screen.getByText("AVAILABLE")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "CONTINUE TO B0 →" }));
 
     expect(screen.getByRole("heading", { name: "AN ASSET" })).toBeInTheDocument();
@@ -203,18 +203,77 @@ describe("Stage A browser lifecycle", () => {
       expect(screen.getByRole("heading", { name: chapter })).toBeInTheDocument();
     }
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "The B1–B5 playable substages have not yet been migrated",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "BACK TO STAGE MAP" }));
-    expect(screen.getByRole("heading", { name: "STAGE MAP" })).toBeInTheDocument();
+    expect(screen.queryByText(/have not yet been migrated/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "START B1 →" }));
+    expect(screen.getByRole("heading", { name: "Simple Yield Valuation" })).toBeInTheDocument();
 
-    const unchangedSave = loadGame()!;
-    expect(unchangedSave.completedStages).toEqual(completedStages);
-    expect(unchangedSave.careerEarnings).toBe(save.careerEarnings);
-    expect(unchangedSave.availableCash).toBe(save.availableCash);
-    expect(unchangedSave.ownedLifestyleIds).toEqual(save.ownedLifestyleIds);
-    expect(unchangedSave.lifestyleSlots).toEqual(save.lifestyleSlots);
+    const transitionedSave = loadGame()!;
+    expect(transitionedSave.currentStageId).toBe("B1");
+    expect(transitionedSave.tutorialsSeenStages).toContain("B0");
+    expect(transitionedSave.completedStages).toEqual(completedStages);
+    expect(transitionedSave.careerEarnings).toBe(save.careerEarnings);
+    expect(transitionedSave.availableCash).toBe(save.availableCash);
+    expect(transitionedSave.ownedLifestyleIds).toEqual(save.ownedLifestyleIds);
+    expect(transitionedSave.lifestyleSlots).toEqual(save.lifestyleSlots);
+  });
+
+  it("completes B1 through B5 in order using the shared question, reward, and map flow", () => {
+    window.localStorage.clear();
+    const completedStages = STAGE_A.map(({ id }) => id);
+    const save: GameSave = {
+      ...createNewGame(),
+      playerName: "Alex",
+      profileCreated: true,
+      phase: "map",
+      resumePhase: "map",
+      currentStageId: "B1",
+      completedStages,
+      tutorialsSeenStages: ["B0"],
+      cashCreditedStages: completedStages,
+      introSeen: true,
+    };
+    saveGame(save);
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "CONTINUE" }));
+    fireEvent.click(screen.getByRole("button", { name: "RESUME B1 →" }));
+
+    let totalCash = save.availableCash;
+    for (const [stageIndex, stage] of STAGE_B.entries()) {
+      if (stageIndex > 0) {
+        fireEvent.click(screen.getByRole("button", { name: "CONTINUE TO MAP →" }));
+        fireEvent.click(screen.getByRole("button", { name: `CONTINUE TO ${stage.id} →` }));
+      }
+      if (screen.queryByRole("button", { name: `SKIP` })) {
+        fireEvent.click(screen.getByRole("button", { name: "SKIP" }));
+      }
+      expect(loadGame()?.currentStageId).toBe(stage.id);
+
+      for (let questionNumber = 0; questionNumber < 8; questionNumber += 1) {
+        const question = loadGame()?.question;
+        expect(question?.stageId).toBe(stage.id);
+        const correctChoice = screen.getAllByTestId("answer-choice").find((button) =>
+          button.getAttribute("aria-label")?.endsWith(question!.correctAnswer),
+        );
+        expect(correctChoice).toBeDefined();
+        fireEvent.click(correctChoice!);
+        if (questionNumber < 7) {
+          fireEvent.click(screen.getByRole("button", { name: "CONTINUE →" }));
+        }
+      }
+
+      const completedSave = loadGame()!;
+      expect(completedSave.completedStages).toContain(stage.id);
+      expect(completedSave.cashCreditedStages).toContain(stage.id);
+      expect(completedSave.result?.stageId).toBe(stage.id);
+      expect(completedSave.result?.correctAnswers).toBe(8);
+      expect(completedSave.availableCash).toBeGreaterThan(totalCash);
+      totalCash = completedSave.availableCash;
+    }
+
+    expect(loadGame()?.completedStages).toEqual([...completedStages, ...STAGE_B.map(({ id }) => id)]);
+    fireEvent.click(screen.getByRole("button", { name: "CONTINUE TO MAP →" }));
+    expect(screen.getByRole("button", { name: "ALL STAGES COMPLETE" })).toBeDisabled();
   });
 
   it("completes a stage, shops with cash, equips an owned item, and returns to the map without replaying rewards", () => {

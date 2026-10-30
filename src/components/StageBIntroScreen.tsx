@@ -4,10 +4,11 @@ import FinancialText from "./FinancialText";
 
 type StageBIntroScreenProps = {
   onBack: () => void;
+  onStartStage: () => void;
   onCalculator: () => void;
 };
 
-function StageBIntroScreen({ onBack, onCalculator }: StageBIntroScreenProps) {
+function StageBIntroScreen({ onBack, onStartStage, onCalculator }: StageBIntroScreenProps) {
   const [index, setIndex] = useState(0);
   const chunk = B0_TUTORIAL[index]!;
   const finalChunk = index === B0_TUTORIAL.length - 1;
@@ -45,11 +46,6 @@ function StageBIntroScreen({ onBack, onCalculator }: StageBIntroScreenProps) {
             )}
           </div>
         </div>
-        {finalChunk && (
-          <p className="stage-b-notice" role="status">
-            B0 is the Stage B introduction. The B1–B5 playable substages have not yet been migrated to the web version.
-          </p>
-        )}
         <div className="lesson-actions">
           {index > 0 ? (
             <button className="secondary-button" onClick={() => setIndex((current) => current - 1)} type="button">
@@ -59,7 +55,7 @@ function StageBIntroScreen({ onBack, onCalculator }: StageBIntroScreenProps) {
             <button className="secondary-button" onClick={onBack} type="button">BACK TO MAP</button>
           )}
           {finalChunk ? (
-            <button className="primary-button" onClick={onBack} type="button">BACK TO STAGE MAP</button>
+            <button className="primary-button" onClick={onStartStage} type="button">START B1 →</button>
           ) : (
             <button className="primary-button" onClick={() => setIndex((current) => current + 1)} type="button">
               CONTINUE →

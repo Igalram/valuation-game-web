@@ -1,9 +1,9 @@
-import { A1_STAGE, type StageAId } from "../definitions/stages";
+import { A1_STAGE, type StageId } from "../definitions/stages";
 import { stageResultLabel } from "./scoring";
 import { stagePayout } from "./rewards";
 
 export type StageResult = {
-  stageId: StageAId;
+  stageId: StageId;
   correctAnswers: number;
   totalQuestions: 8;
   accuracyPct: number;
@@ -14,7 +14,7 @@ export type StageResult = {
 };
 
 export function completeStage(
-  stageId: StageAId,
+  stageId: StageId,
   correctAnswers: number,
   performancePoints: number,
   alreadyCredited: boolean,

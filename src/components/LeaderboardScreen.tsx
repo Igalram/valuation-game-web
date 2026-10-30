@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PlayerAvatar from "./PlayerAvatar";
-import { STAGE_A } from "../game/definitions/stages";
+import { ALL_SCORED_STAGES } from "../game/definitions/stages";
 import {
   fetchOverallLeaderboard,
   fetchStageLeaderboard,
@@ -17,7 +17,7 @@ type RankingState =
 
 function LeaderboardScreen({ onBack }: { onBack: () => void }) {
   const [mode, setMode] = useState<RankingMode>("overall");
-  const [stageId, setStageId] = useState(STAGE_A[0]!.id);
+  const [stageId, setStageId] = useState(ALL_SCORED_STAGES[0]!.id);
   const [ranking, setRanking] = useState<RankingState>({ status: "loading" });
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -94,7 +94,7 @@ function LeaderboardScreen({ onBack }: { onBack: () => void }) {
             <label className="leaderboard-stage-select">
               Stage
               <select value={stageId} onChange={(event) => setStageId(event.target.value as typeof stageId)}>
-                {STAGE_A.map((stage) => (
+                {ALL_SCORED_STAGES.map((stage) => (
                   <option key={stage.id} value={stage.id}>{stage.id} · {stage.title}</option>
                 ))}
               </select>

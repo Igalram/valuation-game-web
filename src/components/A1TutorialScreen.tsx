@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getStageA, type StageAId } from "../game/definitions/stages";
+import { getStageDefinition, type StageId } from "../game/definitions/stages";
 import { EMPTY_CALCULATOR, pressCalculator, type CalculatorState } from "../game/logic/calculator";
 import { useTypewriter } from "../game/useTypewriter";
 import FinancialText from "./FinancialText";
@@ -26,7 +26,7 @@ const FUTURE_VALUE_DEMO: FutureValueDemoAction[] = [
 ];
 
 type A1TutorialScreenProps = {
-  stageId?: StageAId;
+  stageId?: StageId;
   onContinue: () => void;
   onTypeTick: () => void;
   onCalculatorDemo: (
@@ -43,7 +43,7 @@ function A1TutorialScreen({
   onTypeTick,
   onCalculatorDemo,
 }: A1TutorialScreenProps) {
-  const stage = getStageA(stageId);
+  const stage = getStageDefinition(stageId);
   const script = useMemo(
     () =>
       [

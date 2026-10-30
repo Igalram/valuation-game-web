@@ -1,6 +1,6 @@
 import type { TimeValueQuestion } from "../game/logic/questions";
 import { potentialPoints, roundedPoints } from "../game/logic/speed";
-import { getStageA } from "../game/definitions/stages";
+import { getStageDefinition } from "../game/definitions/stages";
 import FinancialText from "./FinancialText";
 import PlayerIdentityCard from "./PlayerIdentityCard";
 import type { PlayerAvatarId } from "../game/logic/playerProfile";
@@ -56,10 +56,10 @@ function QuestionScreen({
   onEditProfile,
 }: QuestionScreenProps) {
   const points = roundedPoints(
-    potentialPoints(elapsedMs / 1000 / getStageA(question.stageId).timeFactor),
+    potentialPoints(elapsedMs / 1000 / getStageDefinition(question.stageId).timeFactor),
   );
   const displayedPoints = answered ? questionPerformancePoints : points;
-  const stage = getStageA(question.stageId);
+  const stage = getStageDefinition(question.stageId);
   const timeline = answered ? question.completedDiagram : question.diagram;
 
   return (
@@ -72,7 +72,7 @@ function QuestionScreen({
           name={playerName}
           onEdit={onEditProfile}
         />
-        <div className="progress-block" aria-label={`A1 question ${questionNumber} of 8`}>
+        <div className="progress-block" aria-label={`${stage.id} question ${questionNumber} of 8`}>
           <div className="progress-caption"><span>{stage.id} · {stage.title.toUpperCase()}</span><strong>{questionNumber} / 8</strong></div>
           <div className="progress-track"><span style={{ width: `${(answeredQuestions / 8) * 100}%` }} /></div>
           <div className="stage-letters" aria-hidden="true">
@@ -101,9 +101,14 @@ function QuestionScreen({
 
       <section className="question-panel" aria-labelledby="question-title">
         <div className="question-copy">
-          <div className="question-kicker">MONEY THROUGH TIME</div>
+          <div className="question-kicker">{stage.id.startsWith("B") ? "VALUATION & YIELD" : "MONEY THROUGH TIME"}</div>
           <h1 id="question-title">{stage.title}</h1>
           <p className="question-prompt"><FinancialText text={question.prompt} /></p>
+          {question.reference && (
+            <p className="benchmark-reference">
+              <FinancialText text={question.reference} />
+            </p>
+          )}
           <div className="answer-grid">
             {question.choices.map((choice, index) => (
               <button
@@ -140,7 +145,7 @@ function QuestionScreen({
           </div>
         </div>
         <aside className="timeline-card" aria-label="Money timeline">
-          <h2>MONEY TIMELINE</h2>
+          <h2>{stage.id.startsWith("B") ? "VALUATION CHECK" : "MONEY TIMELINE"}</h2>
           <svg aria-hidden="true" className="timeline-graphic" viewBox="0 0 300 116">
             <line x1="36" y1="50" x2="264" y2="50" />
             {timeline.map(([label, value], index) => {
@@ -164,7 +169,11 @@ function QuestionScreen({
           <p className="timeline-note">
             {stage.id === "A2"
               ? "A negative return reduces the starting value."
-              : "Interest is the price paid for using money over time."}
+              : stage.id === "B4"
+                ? "Divide annual income by the offer price to find the implied yield."
+                : stage.id.startsWith("B")
+                  ? "Compare the offer price with the calculated fair value."
+                  : "Interest is the price paid for using money over time."}
           </p>
         </aside>
       </section>

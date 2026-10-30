@@ -12,7 +12,7 @@ const avatarIds = new Set([
   "elena", "ravi", "cleo", "milo", "aya", "ezra", "lila", "andre",
 ]);
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const stagePattern = /^A[1-8]$/;
+const stagePattern = /^(A[1-8]|B[1-5])$/;
 
 function response(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
@@ -67,7 +67,7 @@ Deno.serve(async (request: Request) => {
   const validScore =
     typeof body.score === "number" &&
     Number.isInteger(body.score) &&
-    body.score >= 0 &&
+    body.score >= -800_000 &&
     body.score <= 800_000;
   const validLevel =
     typeof body.level === "number" &&

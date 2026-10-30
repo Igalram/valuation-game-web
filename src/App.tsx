@@ -9,7 +9,7 @@ import MapScreen from "./components/MapScreen";
 import PlayerProfileForm from "./components/PlayerProfileForm";
 import QuestionScreen from "./components/QuestionScreen";
 import StageBIntroScreen from "./components/StageBIntroScreen";
-import { A0_TUTORIAL, getStageA, nextStageA, STAGE_A } from "./game/definitions/stages";
+import { A0_TUTORIAL, getStageDefinition, nextStage, STAGE_A } from "./game/definitions/stages";
 import { GameAudio } from "./game/audio";
 import { getCareerLevel, getPromotionForCompletion, type CareerLevel } from "./game/logic/career";
 import { completeStage } from "./game/logic/progression";
@@ -412,7 +412,7 @@ function App() {
     const earnedPoints = performancePointsEarned(
       elapsedMs / 1000,
       result.outcome === "correct",
-      getStageA(current.currentStageId).timeFactor,
+      getStageDefinition(current.currentStageId).timeFactor,
     );
     const questionNumber = current.questionNumber + 1;
     const correctAnswers =
@@ -511,12 +511,39 @@ function App() {
       (current.phase !== "summary" && current.phase !== "map") ||
       !current.completedStages.includes(current.currentStageId)
     ) return;
-    const nextStageId = nextStageA(current.currentStageId);
+    const nextStageId = nextStage(current.currentStageId);
     if (!nextStageId || !current.completedStages.includes(current.currentStageId)) return;
     questionStartedAt.current = 0;
     updateGame((state) => ({
       ...state,
       currentStageId: nextStageId,
+      phase: "a1-tutorial",
+      resumePhase: "a1-tutorial",
+      question: null,
+      questionNumber: 0,
+      correctAnswers: 0,
+      streak: 0,
+      stageEarnings: 0,
+      elapsedMs: 0,
+      answer: null,
+      answerCorrect: null,
+      questionPerformancePoints: 0,
+      stagePerformancePoints: 0,
+      feedback: [],
+      result: null,
+      tutorialReturnPhase: null,
+    }));
+  }, [updateGame]);
+
+  const startStageB = useCallback(() => {
+    questionStartedAt.current = 0;
+    setShowStageBIntro(false);
+    updateGame((state) => ({
+      ...state,
+      currentStageId: "B1",
+      tutorialsSeenStages: state.tutorialsSeenStages.includes("B0")
+        ? state.tutorialsSeenStages
+        : [...state.tutorialsSeenStages, "B0"],
       phase: "a1-tutorial",
       resumePhase: "a1-tutorial",
       question: null,
@@ -581,7 +608,10 @@ function App() {
   const resumeFromMap = useCallback(() => {
     const current = gameRef.current;
     if (!current) return;
-    if (STAGE_A.every(({ id }) => current.completedStages.includes(id))) {
+    if (
+      STAGE_A.every(({ id }) => current.completedStages.includes(id)) &&
+      !current.tutorialsSeenStages.includes("B0")
+    ) {
       setShowStageBIntro(true);
       return;
     }
@@ -756,6 +786,7 @@ function App() {
           <StageBIntroScreen
             onBack={() => setShowStageBIntro(false)}
             onCalculator={toggleCalculator}
+            onStartStage={startStageB}
           />
         ) : (
           <MapScreen
@@ -827,7 +858,7 @@ function App() {
           onLifestyle={openLifestyle}
           onMap={openMap}
           result={game.result}
-          stage={getStageA(game.currentStageId)}
+          stage={getStageDefinition(game.currentStageId)}
         />
       )}
       {pauseOpen && (

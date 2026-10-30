@@ -1,7 +1,7 @@
 import type { StageResult } from "../../game/logic/progression";
 import type { TimeValueQuestion } from "../../game/logic/questions";
 import { isValidStageQuestion } from "../../game/logic/questions";
-import { A0_TUTORIAL, STAGE_A, type StageAId } from "../../game/definitions/stages";
+import { A0_TUTORIAL, isStageId, isTutorialId, type StageId, type TutorialId } from "../../game/definitions/stages";
 import { LIFESTYLE_ITEM_BY_ID, type LifestyleSlot } from "../../systems/lifestyle-shop/catalog";
 import { MAX_PERFORMANCE_POINTS_PER_STAGE } from "../../game/logic/rewards";
 import { isPlayerAvatarId, type PlayerAvatarId } from "../../game/logic/playerProfile";
@@ -25,9 +25,9 @@ export type GameSave = {
   profileCreated: boolean;
   phase: GamePhase;
   resumePhase: LivePhase | null;
-  currentStageId: StageAId;
-  completedStages: StageAId[];
-  tutorialsSeenStages: StageAId[];
+  currentStageId: StageId;
+  completedStages: StageId[];
+  tutorialsSeenStages: TutorialId[];
   introIndex: number;
   introSeen: boolean;
   tutorialSeen: boolean;
@@ -144,10 +144,6 @@ function isLivePhase(value: unknown): value is LivePhase {
   );
 }
 
-function isStageAId(value: unknown): value is StageAId {
-  return typeof value === "string" && STAGE_A.some((stage) => stage.id === value);
-}
-
 function isStageResult(value: unknown): value is StageResult {
   if (
     !isRecord(value) ||
@@ -166,7 +162,7 @@ function isStageResult(value: unknown): value is StageResult {
           ? "Developing"
           : "Needs Review";
   return (
-    isStageAId(value.stageId) &&
+    isStageId(value.stageId) &&
     Number.isInteger(value.correctAnswers) &&
     value.correctAnswers >= 0 &&
     value.correctAnswers <= 8 &&
@@ -195,11 +191,11 @@ function isGameSave(value: unknown): value is GameSave {
     (!value.profileCreated || value.playerName.trim().length > 0) &&
     isGamePhase(value.phase) &&
     (value.resumePhase === null || isLivePhase(value.resumePhase)) &&
-    isStageAId(value.currentStageId) &&
+    isStageId(value.currentStageId) &&
     Array.isArray(value.completedStages) &&
-    value.completedStages.every(isStageAId) &&
+    value.completedStages.every(isStageId) &&
     Array.isArray(value.tutorialsSeenStages) &&
-    value.tutorialsSeenStages.every(isStageAId) &&
+    value.tutorialsSeenStages.every(isTutorialId) &&
     isNumber(value.introIndex) &&
     Number.isInteger(value.introIndex) &&
     value.introIndex >= 0 &&
@@ -244,7 +240,7 @@ function isGameSave(value: unknown): value is GameSave {
     Number.isInteger(value.itemSerial) &&
     isNumber(value.elapsedMs) &&
     Array.isArray(value.cashCreditedStages) &&
-    value.cashCreditedStages.every(isStageAId) &&
+    value.cashCreditedStages.every(isStageId) &&
     new Set(value.cashCreditedStages).size === value.cashCreditedStages.length &&
     new Set(value.completedStages).size === value.completedStages.length &&
     new Set(value.tutorialsSeenStages).size === value.tutorialsSeenStages.length &&

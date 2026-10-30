@@ -3,8 +3,12 @@ import {
   A0_TUTORIAL,
   A1_STAGE,
   A1_TUTORIAL,
+  ALL_SCORED_STAGES,
+  B0_TUTORIAL,
   nextStageA,
+  nextStage,
   STAGE_A,
+  STAGE_B,
 } from "../definitions/stages";
 import { evaluateExpression, formatResult } from "./calculator";
 import { completeA1, completeStage } from "./progression";
@@ -270,6 +274,100 @@ describe("A1 question generation and scoring", () => {
       "Developing",
       "Needs Review",
     ]);
+  });
+});
+
+describe("Stage B yield and valuation migration", () => {
+  it("keeps the complete B0 introduction and connects A8 through B5 in sequence", () => {
+    expect(B0_TUTORIAL).toHaveLength(9);
+    expect(STAGE_B.map(({ title }) => title)).toEqual([
+      "Simple Yield Valuation",
+      "Benchmark Yields",
+      "Yield / Multiple",
+      "Implied Yield",
+      "Harder Yield Valuation",
+    ]);
+    expect(STAGE_B[1]?.tutorial.steps).toEqual([
+      "Find Logistics Property in the benchmark-yield sheet.",
+      "Benchmark yield = 5.5%.",
+      "Fair value = $500,000 ÷ 5.5% ≈ $9,090,909.",
+      "$9.2m is above fair value.",
+    ]);
+    expect(STAGE_B[1]?.tutorial.finalAnswer).toBe("SELL");
+    expect(ALL_SCORED_STAGES.map(({ id }) => id)).toEqual([
+      "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8",
+      "B1", "B2", "B3", "B4", "B5",
+    ]);
+    expect(nextStage("A8")).toBe("B1");
+    for (const [index, stage] of STAGE_B.entries()) {
+      expect(nextStage(stage.id)).toBe(STAGE_B[index + 1]?.id ?? null);
+    }
+    expect(STAGE_B.find(({ id }) => id === "B2")?.timeFactor).toBe(3);
+  });
+
+  it("generates source-based B1–B5 questions with correct formulas and exactly one answer", () => {
+    for (const stageId of ["B1", "B2", "B3", "B4", "B5"] as const) {
+      for (let serial = 1; serial <= 100; serial += 1) {
+        const question = generateStageQuestion(
+          stageId,
+          createRandom(serial * 47),
+          serial,
+          serial,
+        );
+        const { annual_income: income, price, fair_value: fairValue } = question.inputs;
+        expect(question.stageId).toBe(stageId);
+        expect(isValidStageQuestion(question)).toBe(true);
+        expect(question.choices).toHaveLength(3);
+        expect(new Set(question.choices).size).toBe(3);
+        expect(question.choices.filter((choice) => choice === question.correctAnswer)).toHaveLength(1);
+
+        if (stageId === "B4") {
+          const yieldPct = question.inputs.implied_yield_pct!;
+          expect(question.correctAnswer).toBe(`${yieldPct.toFixed(1)}%`);
+          expect(income).toBe(price! * yieldPct / 100);
+          expect(new Set(question.choices)).toEqual(new Set([
+            `${(yieldPct - 1).toFixed(1)}%`,
+            `${yieldPct.toFixed(1)}%`,
+            `${(yieldPct + 1).toFixed(1)}%`,
+          ]));
+        } else {
+          const yieldPct = question.inputs.required_yield_pct;
+          if (stageId === "B3") {
+            expect(fairValue).toBe(income! * question.inputs.multiple!);
+            expect(question.inputs.equivalent_yield_pct).toBe(100 / question.inputs.multiple!);
+          } else {
+            expect(fairValue).toBe(income! / (yieldPct! / 100));
+          }
+          expect(question.correctAnswer).toBe(
+            (fairValue! - price!) / fairValue! * 100 > 5
+              ? "BUY"
+              : (fairValue! - price!) / fairValue! * 100 < -5
+                ? "SELL"
+                : "NEUTRAL",
+          );
+          const targetRating = ["BUY", "NEUTRAL", "SELL"][(serial - 1) % 3]!;
+          const expectedMispricing = stageId === "B1" && targetRating !== "NEUTRAL"
+            ? targetRating === "BUY" ? 25 : -25
+            : targetRating === "BUY" ? 10 : targetRating === "SELL" ? -10 : 0;
+          expect((fairValue! - price!) / fairValue! * 100).toBeCloseTo(expectedMispricing);
+          expect(question.completedDiagram[2]?.[1]).toBe(formatMoney(fairValue!));
+          if (stageId === "B2") {
+            expect(question.reference).toMatch(/^MARKET YIELD SHEET · .+ \d+(\.\d+)?%$/);
+            expect(question.prompt).not.toContain(`${yieldPct}%`);
+          }
+        }
+      }
+    }
+  });
+
+  it("keeps B2 timing, performance points, and B-stage rewards in the shared systems", () => {
+    expect(performancePointsEarned(15, true, STAGE_B[1]!.timeFactor)).toBe(
+      performancePointsEarned(5, true),
+    );
+    const completion = completeStage("B5", 8, MAX_PERFORMANCE_POINTS_PER_STAGE, false);
+    expect(completion.stageId).toBe("B5");
+    expect(completion.earnings).toBe(STAGE_REWARD_CAPS.B5);
+    expect(completion.cashCredited).toBe(STAGE_REWARD_CAPS.B5);
   });
 });
 

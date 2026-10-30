@@ -5,6 +5,7 @@ import {
   loadGame,
   saveGame,
   SAVE_KEY,
+  type GameSave,
 } from "./gameSave";
 import { createRandom } from "../../game/logic/random";
 import { generateA1Question } from "../../game/logic/questions";
@@ -160,5 +161,31 @@ describe("browser save data", () => {
     expect(loaded?.equippedVehicleId).toBe("car_02");
     expect(loaded?.ownedLifestyleIds).toEqual(["outfit_01"]);
     expect(loaded?.lifestyleSlots).toEqual({ clothing: "outfit_01" });
+  });
+
+  it("persists Stage B completion and tutorial progress across a reload", () => {
+    const save: GameSave = {
+      ...createNewGame(),
+      phase: "map",
+      resumePhase: "map",
+      currentStageId: "B3",
+      completedStages: ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "B1", "B2"],
+      tutorialsSeenStages: ["B0", "B1", "B2"],
+      cashCreditedStages: ["A1", "B1", "B2"],
+      careerEarnings: 45_000,
+      availableCash: 12_500,
+      ownedLifestyleIds: ["outfit_01"],
+      lifestyleSlots: { clothing: "outfit_01" },
+    };
+    saveGame(save);
+
+    const reloaded = loadGame();
+    expect(reloaded?.currentStageId).toBe("B3");
+    expect(reloaded?.completedStages).toEqual(save.completedStages);
+    expect(reloaded?.tutorialsSeenStages).toEqual(save.tutorialsSeenStages);
+    expect(reloaded?.careerEarnings).toBe(45_000);
+    expect(reloaded?.availableCash).toBe(12_500);
+    expect(reloaded?.ownedLifestyleIds).toEqual(["outfit_01"]);
+    expect(reloaded?.lifestyleSlots).toEqual({ clothing: "outfit_01" });
   });
 });
